@@ -10,7 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.io.IOException;
+import java.nio.file.Path;
 
+import com.comp3607.telemetry.strategy.CsvExportStrategy;
+import com.comp3607.telemetry.strategy.EventExporter;
+import com.comp3607.telemetry.strategy.ExportStrategy;
 import com.comp3607.telemetry.editor.EditorActivityTracker;
 import com.comp3607.telemetry.factory.*;
 import com.comp3607.telemetry.observer.*;
@@ -26,6 +31,7 @@ public class BlueJExtension extends Extension
     private static final Logger LOGGER =Logger.getLogger(BlueJExtension.class.getName());
     private final ObserverSubject telemetrySubject = new ObserverSubject();
     private final ObserverManager observerManager = new ObserverManager();
+    private final EventExporter eventExporter = new EventExporter(new CsvExportStrategy());
     private final CompilationStatistics compilationStatistics = new CompilationStatistics();
     private BlueJ blueJ;
     private boolean listenersRegistered;
@@ -47,6 +53,15 @@ public class BlueJExtension extends Extension
         telemetrySubject.addObserver(compilationStatistics);
     }
 
+        
+    public void setExportStrategy(ExportStrategy strategy) {
+        eventExporter.setStrategy(strategy);
+    }
+
+    
+    public Path exportEvents(Path directory, String fileNameWithoutExtension) throws IOException {
+        return eventExporter.exportToFile(observerManager.getEvents(), directory, fileNameWithoutExtension);
+    }
     @Override
     public synchronized void startup(BlueJ bluej) {
         if (listenersRegistered) {
