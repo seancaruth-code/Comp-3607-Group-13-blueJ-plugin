@@ -1,21 +1,19 @@
 
-package com.comp3607.telemetry;
+package com.comp3607.telemetry.observer;
 
 import org.junit.jupiter.api.Test;
 
 import com.comp3607.telemetry.events.CompilationEvent;
-import com.comp3607.telemetry.observer.TelemetryManager;
-import com.comp3607.telemetry.observer.TelemetrySubject;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TelemetrySubjectTest {
+class observerTest {
 
     @Test
     void testObserverReceivesEvent() {
 
-        TelemetrySubject subject = new TelemetrySubject();
-        TelemetryManager manager = new TelemetryManager();
+        ObserverSubject subject = new ObserverSubject();
+        ObserverManager manager = new ObserverManager();
 
         subject.addObserver(manager);
 
@@ -37,8 +35,8 @@ class TelemetrySubjectTest {
     @Test
     void testRemoveObserver() {
 
-        TelemetrySubject subject = new TelemetrySubject();
-        TelemetryManager manager = new TelemetryManager();
+        ObserverSubject subject = new ObserverSubject();
+        ObserverManager manager = new ObserverManager();
 
         subject.addObserver(manager);
         subject.removeObserver(manager);
@@ -53,8 +51,8 @@ class TelemetrySubjectTest {
     @Test
     void testMultipleEvents() {
 
-        TelemetrySubject subject = new TelemetrySubject();
-        TelemetryManager manager = new TelemetryManager();
+        ObserverSubject subject = new ObserverSubject();
+        ObserverManager manager = new ObserverManager();
 
         subject.addObserver(manager);
 
@@ -67,5 +65,17 @@ class TelemetrySubjectTest {
         );
 
         assertEquals(2, manager.getEventCount());
+    }
+
+    @Test
+    void observerFailureDoesNotPreventLaterObservers() {
+        ObserverSubject subject = new ObserverSubject();
+        ObserverManager manager = new ObserverManager();
+        subject.addObserver(event -> { throw new IllegalStateException("test failure"); });
+        subject.addObserver(manager);
+
+        subject.notifyObservers(new CompilationEvent(true, 200, null));
+
+        assertEquals(1, manager.getEventCount());
     }
 }

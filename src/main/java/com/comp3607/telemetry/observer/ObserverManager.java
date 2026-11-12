@@ -2,32 +2,26 @@
 package com.comp3607.telemetry.observer;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
-public class TelemetryManager implements TelemetryObserver {
+public class ObserverManager implements Observer {
 
-    private final List<TelemetryEvent> events =
-            new ArrayList<>();
+    private final List<TelemetryEvent> events =new ArrayList<>();
 
     @Override
-    public synchronized void onEvent(TelemetryEvent event) {
+    public synchronized void Event(TelemetryEvent event) {
 
         if (event == null) {
-            throw new IllegalArgumentException(
-                "Event cannot be null"
-            );
+            throw new IllegalArgumentException("Event cannot be null");
         }
 
         events.add(event);
     }
 
     public synchronized List<TelemetryEvent> getEvents() {
-        return Collections.unmodifiableList(
-            new ArrayList<>(events)
-        );
+        return List.copyOf(events);
     }
 
     public synchronized int getEventCount() {

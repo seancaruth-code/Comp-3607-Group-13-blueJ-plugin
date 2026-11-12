@@ -1,27 +1,27 @@
 
 package com.comp3607.telemetry.observer;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.*;
+import java.util.logging.*;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
-public class TelemetrySubject {
+public class ObserverSubject {
+    private static final Logger LOGGER = Logger.getLogger(ObserverSubject.class.getName());
 
-    private final List<TelemetryObserver> observers =
-            new CopyOnWriteArrayList<>();
+    private final List<Observer> observers = new ArrayList<>();
 
-    public void addObserver(TelemetryObserver observer) {
+    public synchronized void addObserver(Observer observer) {
         if (observer == null) {
-            throw new IllegalArgumentException(
-                "Observer cannot be null"
-            );
+            throw new IllegalArgumentException("Observer cannot be null");
         }
 
-        observers.add(observer);
+        if (!observers.contains(observer)) {
+            observers.add(observer);
+        }
     }
 
-    public void removeObserver(TelemetryObserver observer) {
+    public synchronized void removeObserver(Observer observer) {
         observers.remove(observer);
     }
 
@@ -32,8 +32,18 @@ public class TelemetrySubject {
             );
         }
 
-        for (TelemetryObserver observer : observers) {
-            observer.onEvent(event);
+        List<Observer> observerCopy;
+
+        synchronized (this) {
+            observerCopy = new ArrayList<>(observers);
+        }
+
+        for (Observer observer : observerCopy) {
+            try {
+                observer.Event(event);
+            } catch (RuntimeException exception) {
+                LOGGER.log(Level.WARNING, "Observer failed while receiving telemetry event", exception);
+            }
         }
     }
 }

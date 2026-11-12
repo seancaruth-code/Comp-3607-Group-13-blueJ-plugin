@@ -11,12 +11,22 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
+        <bluej.installation>C:/Program Files/BlueJ</bluej.installation>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
     </properties>
 
     <dependencies>
+
+        <!-- Supplied by the BlueJ installation; never package BlueJ classes. -->
+        <dependency>
+            <groupId>org.bluej</groupId>
+            <artifactId>bluej</artifactId>
+            <version>6.0.1</version>
+            <scope>system</scope>
+            <systemPath>${bluej.installation}/lib/bluej.jar</systemPath>
+        </dependency>
 
         <!-- JUnit 5 for unit testing -->
         <dependency>
@@ -37,7 +47,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <release>17</release>
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
 
@@ -46,6 +56,21 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>
+                                com.comp3607.telemetry.bluej.BlueJTelemetryExtension
+                            </mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
 
         </plugins>

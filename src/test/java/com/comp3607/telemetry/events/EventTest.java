@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TelemetryEventTest {
+class EventTest {
 
     @Test
     void testEventCreation() {
@@ -60,7 +60,17 @@ void testExecutionEvent() {
 
     assertTrue(event.getSuccessful());
     assertEquals(500, event.getExecutionTime());
+    assertTrue(event.isExecutionTimeAvailable());
     assertEquals("EXECUTION", event.getEventType());
+}
+
+@Test
+void testExecutionEventWithUnavailableDuration() {
+    ExecutionEvent event = new ExecutionEvent(false, (Long) null);
+
+    assertFalse(event.getSuccessful());
+    assertNull(event.getExecutionTime());
+    assertFalse(event.isExecutionTimeAvailable());
 }
 
 }
