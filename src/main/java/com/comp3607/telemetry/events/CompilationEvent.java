@@ -3,15 +3,27 @@ package com.comp3607.telemetry.events;
 
 import java.util.List;
 
+/**
+ * Records the outcome and diagnostic metadata of a compilation.
+ */
 public class CompilationEvent extends TelemetryEvent {
 
+    /** Whether the operation completed successfully. */
+
     private final boolean successful;
+    /** Measured compilation duration in milliseconds. */
     private final long compilationTime;
+    /** Compiler diagnostic text, when available. */
     private final String errorMessage;
+    /** Line containing the compilation error, when available. */
     private final Integer errorLineNumber;
+    /** Editor position associated with the compilation diagnostic. */
     private final int[] errorPosition;
+    /** Source files included in the compilation. */
     private final List<String> files;
+    /** Whether the compilation was initiated by the user. */
     private final boolean userGenerated;
+    /** Whether a compilation duration was measured. */
     private final boolean compilationTimeAvailable;
 
     public CompilationEvent(boolean successful,long compilationTime,String errorMessage) {
