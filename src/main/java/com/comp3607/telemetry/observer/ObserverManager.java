@@ -6,12 +6,15 @@ import java.util.List;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
+/**
+ * Observer that stores an immutable-readable history of received events.
+ */
 public class ObserverManager implements Observer {
 
     private final List<TelemetryEvent> events =new ArrayList<>();
 
     @Override
-    public synchronized void Event(TelemetryEvent event) {
+    public synchronized void onEvent(TelemetryEvent event) {
 
         if (event == null) {
             throw new IllegalArgumentException("Event cannot be null");

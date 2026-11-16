@@ -4,6 +4,9 @@ import java.util.Objects;
 
 import com.comp3607.telemetry.events.ProjectEvent;
 
+/**
+ * Creates project lifecycle events.
+ */
 public class ProjectEventFactory extends TelemetryEventFactory {
 
     private final String action;

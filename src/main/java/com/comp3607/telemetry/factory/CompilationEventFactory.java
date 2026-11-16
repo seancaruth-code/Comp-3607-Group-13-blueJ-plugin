@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.comp3607.telemetry.events.CompilationEvent;
 
+/**
+ * Creates compilation events after validating compilation metadata.
+ */
 public class CompilationEventFactory extends TelemetryEventFactory {
 
     private final boolean successful;

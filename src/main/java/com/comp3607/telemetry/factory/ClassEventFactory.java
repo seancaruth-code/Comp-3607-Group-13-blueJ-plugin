@@ -4,6 +4,9 @@ import java.util.Objects;
 
 import com.comp3607.telemetry.events.ClassEvent;
 
+/**
+ * Creates class lifecycle events.
+ */
 public class ClassEventFactory extends TelemetryEventFactory {
     private final String action;
     private final String className;
