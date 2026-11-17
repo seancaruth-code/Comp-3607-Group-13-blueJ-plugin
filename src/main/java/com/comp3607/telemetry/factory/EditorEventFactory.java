@@ -5,6 +5,9 @@ import java.util.Objects;
 
 import com.comp3607.telemetry.events.EditorEvent;
 
+/**
+ * Creates editor activity events.
+ */
 public class EditorEventFactory extends TelemetryEventFactory {
 
     private final String activityType;

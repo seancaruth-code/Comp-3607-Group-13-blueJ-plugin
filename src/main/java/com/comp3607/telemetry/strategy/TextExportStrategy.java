@@ -5,6 +5,9 @@ import java.util.Map;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
+/**
+ * Serializes telemetry events as a readable plain-text report.
+ */
 public class TextExportStrategy implements ExportStrategy {
 
     @Override

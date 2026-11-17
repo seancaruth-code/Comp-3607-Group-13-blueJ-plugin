@@ -1,13 +1,23 @@
 
 package com.comp3607.telemetry.events;
 
+/**
+ * Records editor-document activity measurements and estimated idle intervals.
+ */
 public class EditorEvent extends TelemetryEvent {
 
+    /** Kind of editor activity. */
+
     private final String activityType;
+    /** Duration of the measured editor interval in milliseconds. */
     private final long duration;
+    /** Number of document replacements represented by this event. */
     private final int editCount;
+    /** Time between the previous and current document replacements. */
     private final Long typingCadence;
+    /** Estimated document replacement frequency per minute. */
     private final double editFrequency;
+    /** Whether the measured interval is classified as idle. */
     private final boolean idle;
 
     public EditorEvent(String activityType, long duration) {

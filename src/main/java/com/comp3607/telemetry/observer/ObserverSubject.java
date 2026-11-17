@@ -6,6 +6,9 @@ import java.util.logging.*;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
+/**
+ * Maintains observers and broadcasts telemetry events to them.
+ */
 public class ObserverSubject {
     private static final Logger LOGGER = Logger.getLogger(ObserverSubject.class.getName());
 
@@ -40,7 +43,7 @@ public class ObserverSubject {
 
         for (Observer observer : observerCopy) {
             try {
-                observer.Event(event);
+                observer.onEvent(event);
             } catch (RuntimeException exception) {
                 LOGGER.log(Level.WARNING, "Observer failed while receiving telemetry event", exception);
             }

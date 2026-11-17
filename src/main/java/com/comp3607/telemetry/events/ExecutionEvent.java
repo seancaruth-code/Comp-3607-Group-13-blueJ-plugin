@@ -3,15 +3,27 @@ package com.comp3607.telemetry.events;
 
 import java.util.List;
 
+/**
+ * Records the outcome and available metadata of a method invocation.
+ */
 public class ExecutionEvent extends TelemetryEvent {
 
+    /** Whether the operation completed successfully. */
+
     private final boolean successful;
+    /** Invocation duration in milliseconds, when available. */
     private final Long executionTime;
+    /** Name of the class associated with this event. */
     private final String className;
+    /** Name of the invoked method. */
     private final String methodName;
+    /** Name of the object on which the method was invoked. */
     private final String objectName;
+    /** Invocation parameter descriptions. */
     private final List<String> parameters;
+    /** BlueJ invocation termination category. */
     private final String terminationType;
+    /** Exception message, when an invocation failed. */
     private final String exceptionMessage;
 
     public ExecutionEvent(boolean successful, long executionTime) {

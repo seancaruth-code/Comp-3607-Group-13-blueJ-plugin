@@ -1,25 +1,20 @@
-
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         https://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>com.comp3607.telemetry</groupId>
     <artifactId>bluej-telemetry-plugin</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
+    <version>1.0.0</version>
+    <name>BlueJ Telemetry Plugin</name>
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <bluej.installation>C:/Program Files/BlueJ</bluej.installation>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
+        <pdfbox.version>2.0.31</pdfbox.version>
     </properties>
-
     <dependencies>
-
-        <!-- Supplied by the BlueJ installation; never package BlueJ classes. -->
+        <!-- The BlueJ API is provided by the local BlueJ installation and is not bundled. -->
         <dependency>
             <groupId>org.bluej</groupId>
             <artifactId>bluej</artifactId>
@@ -27,37 +22,35 @@
             <scope>system</scope>
             <systemPath>${bluej.installation}/lib/bluej.jar</systemPath>
         </dependency>
-
-        <!-- JUnit 5 for unit testing -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
-
     <build>
         <plugins>
-
-            <!-- Java compiler configuration -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
             </plugin>
-
-            <!-- JUnit 5 test execution -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration><useModulePath>false</useModulePath></configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -65,15 +58,71 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>
-                                com.comp3607.telemetry.bluej.BlueJTelemetryExtension
-                            </mainClass>
+                            <mainClass>com.comp3607.telemetry.bluej.BlueJExtension</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Implementation-Title>BlueJ Telemetry Plugin</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
-
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <doclint>none</doclint>
+                    <source>${maven.compiler.release}</source>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution><goals><goal>prepare-agent</goal></goals></execution>
+                    <execution>
+                        <id>coverage-report</id>
+                        <phase>verify</phase>
+                        <goals><goal>report</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Package PDFBox and its runtime dependencies; the BlueJ API remains provided locally. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.comp3607.telemetry.bluej.BlueJExtension</mainClass>
+                                    <manifestEntries>
+                                        <Implementation-Title>BlueJ Telemetry Plugin</Implementation-Title>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 </project>

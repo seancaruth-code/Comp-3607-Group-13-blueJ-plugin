@@ -7,7 +7,7 @@ import com.comp3607.telemetry.events.CompilationEvent;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class observerTest {
+class ObserverTest {
 
     @Test
     void testObserverReceivesEvent() {

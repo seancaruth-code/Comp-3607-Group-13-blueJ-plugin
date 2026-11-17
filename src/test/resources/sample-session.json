@@ -1,0 +1,274 @@
+{
+  "session": {
+    "studentId": "STUDENT_ID_PLACEHOLDER",
+    "startTime": "2026-11-15T10:00:00",
+    "endTime": "2026-11-15T10:45:12",
+    "durationSeconds": 2712,
+    "totalEvents": 17,
+    "totalCompilationAttempts": 5
+  },
+  "summary": {
+    "compilation": {
+      "attempts": 5,
+      "successful": 1,
+      "failed": 4,
+      "successRate": 0.2,
+      "errorRatio": 0.8
+    },
+    "errorFrequency": [
+      {
+        "error": "';' expected",
+        "count": 2
+      },
+      {
+        "error": "cannot find symbol: variable nme",
+        "count": 1
+      },
+      {
+        "error": "incompatible types: String cannot be converted to int",
+        "count": 1
+      }
+    ],
+    "editing": {
+      "activeTimeMs": 300000,
+      "idleTimeMs": 90000,
+      "activeRatio": 0.7692,
+      "totalEdits": 140
+    },
+    "execution": {
+      "runs": 2,
+      "failed": 1
+    },
+    "classTimeline": [
+      {
+        "time": "2026-11-16T01:18:06.248727464",
+        "action": "created",
+        "className": "Student"
+      },
+      {
+        "time": "2026-11-16T01:18:06.250074678",
+        "action": "created",
+        "className": "Course"
+      },
+      {
+        "time": "2026-11-16T01:18:06.250184493",
+        "action": "renamed",
+        "className": "Lecturer"
+      }
+    ],
+    "methodTimeline": [
+      {
+        "time": "2026-11-16T01:18:06.262315488",
+        "action": "defined",
+        "className": "Student",
+        "method": "Student(String,int)"
+      },
+      {
+        "time": "2026-11-16T01:18:06.26236909",
+        "action": "defined",
+        "className": "Student",
+        "method": "getName()"
+      },
+      {
+        "time": "2026-11-16T01:18:06.262411406",
+        "action": "defined",
+        "className": "Lecturer",
+        "method": "teach(Course)"
+      },
+      {
+        "time": "2026-11-16T01:18:06.262428142",
+        "action": "removed",
+        "className": "Student",
+        "method": "getNme()"
+      }
+    ],
+    "eventCounts": {
+      "CLASS": 3,
+      "COMPILATION": 5,
+      "EDITOR": 2,
+      "EXECUTION": 2,
+      "METHOD": 4,
+      "PROJECT": 1
+    }
+  },
+  "events": [
+    {
+      "eventId": "c086caf7-5963-4598-a51b-e8f2e472aa03",
+      "eventType": "PROJECT",
+      "timestamp": "2026-11-16T01:18:06.248023101",
+      "description": "opened: Demo",
+      "action": "opened",
+      "itemName": "Demo"
+    },
+    {
+      "eventId": "73e1f8be-88c2-46c4-a0b7-8c2cbd6af41e",
+      "eventType": "CLASS",
+      "timestamp": "2026-11-16T01:18:06.248727464",
+      "description": "created: Student",
+      "action": "created",
+      "className": "Student",
+      "oldName": null,
+      "compiled": false,
+      "hasError": false
+    },
+    {
+      "eventId": "ab46a746-7fcd-4bba-80ce-ee5498a5c077",
+      "eventType": "COMPILATION",
+      "timestamp": "2026-11-16T01:18:06.249065494",
+      "description": "Compilation failed",
+      "successful": false,
+      "compilationTimeMs": 120,
+      "errorMessage": "';' expected",
+      "errorLine": 4,
+      "files": ["Student.java"]
+    },
+    {
+      "eventId": "1992bd79-45ac-4d10-a4bb-d05f7afa02ee",
+      "eventType": "COMPILATION",
+      "timestamp": "2026-11-16T01:18:06.249111679",
+      "description": "Compilation failed",
+      "successful": false,
+      "compilationTimeMs": 90,
+      "errorMessage": "';' expected",
+      "errorLine": 9,
+      "files": ["Student.java"]
+    },
+    {
+      "eventId": "19a23cbc-7c64-4dca-ad4b-204d53d0f6c2",
+      "eventType": "COMPILATION",
+      "timestamp": "2026-11-16T01:18:06.249201814",
+      "description": "Compilation failed",
+      "successful": false,
+      "compilationTimeMs": 80,
+      "errorMessage": "cannot find symbol: variable nme",
+      "errorLine": 12,
+      "files": ["Student.java"]
+    },
+    {
+      "eventId": "d4d79617-4eec-4221-a8d9-3b0f81cdb36a",
+      "eventType": "COMPILATION",
+      "timestamp": "2026-11-16T01:18:06.249254411",
+      "description": "Compilation failed",
+      "successful": false,
+      "compilationTimeMs": 80,
+      "errorMessage": "incompatible types: String cannot be converted to int",
+      "errorLine": 15,
+      "files": ["Student.java"]
+    },
+    {
+      "eventId": "2a4cfa29-e7c1-44f8-97d5-fc5704e8ea17",
+      "eventType": "COMPILATION",
+      "timestamp": "2026-11-16T01:18:06.249301816",
+      "description": "Compilation successful",
+      "successful": true,
+      "compilationTimeMs": 60,
+      "errorMessage": null,
+      "errorLine": null,
+      "files": []
+    },
+    {
+      "eventId": "6436ce78-0042-483f-9896-bb197ba725b9",
+      "eventType": "CLASS",
+      "timestamp": "2026-11-16T01:18:06.250074678",
+      "description": "created: Course",
+      "action": "created",
+      "className": "Course",
+      "oldName": null,
+      "compiled": true,
+      "hasError": false
+    },
+    {
+      "eventId": "4850bf88-d336-40ab-a839-8a7996168f27",
+      "eventType": "CLASS",
+      "timestamp": "2026-11-16T01:18:06.250184493",
+      "description": "renamed: Lecturer",
+      "action": "renamed",
+      "className": "Lecturer",
+      "oldName": "Course",
+      "compiled": true,
+      "hasError": false
+    },
+    {
+      "eventId": "d666845d-0280-4196-9b73-9dfc449f24a9",
+      "eventType": "EDITOR",
+      "timestamp": "2026-11-16T01:18:06.251478522",
+      "description": "typing activity",
+      "activityType": "typing",
+      "editCount": 140,
+      "typingCadenceMs": 250,
+      "editFrequencyPerMin": 28.0,
+      "idle": false
+    },
+    {
+      "eventId": "acbecb86-b3e1-4070-a3df-4d9a1936b252",
+      "eventType": "EDITOR",
+      "timestamp": "2026-11-16T01:18:06.251540031",
+      "description": "idle activity",
+      "activityType": "idle",
+      "editCount": 0,
+      "typingCadenceMs": null,
+      "editFrequencyPerMin": 0.0,
+      "idle": true
+    },
+    {
+      "eventId": "be15e7a3-7ab4-4c80-a5ce-3c2176ba7cae",
+      "eventType": "METHOD",
+      "timestamp": "2026-11-16T01:18:06.262315488",
+      "description": "defined: Student.Student(String,int)",
+      "action": "defined",
+      "className": "Student",
+      "method": "Student(String,int)"
+    },
+    {
+      "eventId": "62fc38c9-78b5-479e-a1b4-85d65453ebe9",
+      "eventType": "METHOD",
+      "timestamp": "2026-11-16T01:18:06.26236909",
+      "description": "defined: Student.getName()",
+      "action": "defined",
+      "className": "Student",
+      "method": "getName()"
+    },
+    {
+      "eventId": "4b5666d3-4569-4366-8494-862a5799c1b8",
+      "eventType": "METHOD",
+      "timestamp": "2026-11-16T01:18:06.262411406",
+      "description": "defined: Lecturer.teach(Course)",
+      "action": "defined",
+      "className": "Lecturer",
+      "method": "teach(Course)"
+    },
+    {
+      "eventId": "6b86470c-48d5-4ed0-9c28-6120b103ee23",
+      "eventType": "METHOD",
+      "timestamp": "2026-11-16T01:18:06.262428142",
+      "description": "removed: Student.getNme()",
+      "action": "removed",
+      "className": "Student",
+      "method": "getNme()"
+    },
+    {
+      "eventId": "ece8f2f5-2096-4ccd-a235-167c05e43862",
+      "eventType": "EXECUTION",
+      "timestamp": "2026-11-16T01:18:06.262767133",
+      "description": "Program executed successfully",
+      "successful": true,
+      "executionTimeMs": 15,
+      "className": null,
+      "methodName": null,
+      "terminationType": null,
+      "exceptionMessage": null
+    },
+    {
+      "eventId": "14138ed3-b9e6-4b1c-8820-fe9c9304a57d",
+      "eventType": "EXECUTION",
+      "timestamp": "2026-11-16T01:18:06.262832284",
+      "description": "Program execution failed",
+      "successful": false,
+      "executionTimeMs": 40,
+      "className": "Main",
+      "methodName": "main",
+      "terminationType": "EXCEPTION",
+      "exceptionMessage": "NullPointerException"
+    }
+  ]
+}

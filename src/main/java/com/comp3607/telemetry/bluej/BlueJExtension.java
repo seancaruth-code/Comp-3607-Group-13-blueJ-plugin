@@ -4,6 +4,9 @@ import java.net.URL;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -12,6 +15,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import com.comp3607.telemetry.report.SessionReport;
+import com.comp3607.telemetry.events.MethodEvent;
+import com.comp3607.telemetry.report.PdfReportGenerator;
+import com.comp3607.telemetry.report.SessionJsonReportGenerator;
 
 import com.comp3607.telemetry.strategy.CsvExportStrategy;
 import com.comp3607.telemetry.strategy.EventExporter;
@@ -36,9 +45,12 @@ public class BlueJExtension extends Extension
     private BlueJ blueJ;
     private boolean listenersRegistered;
     private final Map<JavaEditor, EditorRegistration> editorTrackers =Collections.synchronizedMap(new IdentityHashMap<>());
+    private final Map<String, Set<String>> methodSignaturesByClass = new HashMap<>();
     private final long idleThresholdMillis;
     private long compilationStartNanos = -1;
     private String lastCompilationError;
+    private LocalDateTime sessionStart;
+    private String currentProjectName = "BlueJ Project";
 
     public BlueJExtension() {
         this(30_000);
@@ -69,6 +81,7 @@ public class BlueJExtension extends Extension
         }
 
         this.blueJ = bluej;
+        this.sessionStart = LocalDateTime.now();
         bluej.addPackageListener(this);
         bluej.addCompileListener(this);
         bluej.addInvocationFinishedListener(this);
@@ -87,6 +100,35 @@ public class BlueJExtension extends Extension
             blueJ = null;
             listenersRegistered = false;
         }
+        exportSessionReport();
+    }
+
+    private void exportSessionReport() {
+        List<com.comp3607.telemetry.events.TelemetryEvent> events = observerManager.getEvents();
+        if (events.isEmpty() || sessionStart == null) {
+            return;
+        }
+        try {
+            LocalDateTime end = LocalDateTime.now();
+            String studentId = System.getProperty("bluej.telemetry.studentId", "unknown");
+            SessionReport report = new SessionReport(studentId, currentProjectName, sessionStart, end, events);
+            Path directory = Path.of(System.getProperty("bluej.telemetry.output",
+                Path.of(System.getProperty("user.home"), "bluej-telemetry").toString()));
+            String stamp = end.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+            String base = "telemetry-" + safeFilePart(currentProjectName) + "-" + stamp;
+            new SessionJsonReportGenerator().generate(report, directory.resolve(base + ".json"));
+            new PdfReportGenerator().generate(report, directory.resolve(base + ".pdf"));
+            LOGGER.info("Telemetry reports saved to " + directory.toAbsolutePath());
+        } catch (Exception exception) {
+            LOGGER.log(Level.WARNING, "Unable to generate telemetry session reports", exception);
+        } finally {
+            sessionStart = null;
+        }
+    }
+
+    private static String safeFilePart(String value) {
+        String safe = value == null ? "project" : value.replaceAll("[^A-Za-z0-9_-]", "_");
+        return safe.isBlank() ? "project" : safe;
     }
 
     @Override
@@ -96,7 +138,7 @@ public class BlueJExtension extends Extension
 
     @Override
     public String getName() {
-        return "BlueJ Telemetry";
+        return "Telemetry";
     }
 
     @Override
@@ -106,7 +148,7 @@ public class BlueJExtension extends Extension
 
     @Override
     public String getDescription() {
-        return "Collects BlueJ project, compilation, and invocation telemetry.";
+        return "Collects BlueJ coding-session telemetry and exports reports.";
     }
 
     @Override
@@ -120,7 +162,8 @@ public class BlueJExtension extends Extension
 
     @Override
     public void packageOpened(PackageEvent event) {
-        publish(new ProjectEventFactory("opened", projectName(event)));
+        currentProjectName = projectName(event);
+        publish(new ProjectEventFactory("opened", currentProjectName));
         attachEditors(event);
     }
 
@@ -222,30 +265,95 @@ public class BlueJExtension extends Extension
     @Override
     public void classNameChanged(ClassEvent event) {
         BClass bClass = event.getBClass();
-        publish(new ClassEventFactory("renamed", bClass.getName(), event.getOldName(),event.isClassCompiled(), event.hasError()));
+        String newName = bClass.getName();
+        synchronized (methodSignaturesByClass) {
+            Set<String> previous = methodSignaturesByClass.remove(event.getOldName());
+            if (previous != null) {
+                methodSignaturesByClass.put(newName, previous);
+            }
+        }
+        publish(new ClassEventFactory("renamed", newName, event.getOldName(),
+            event.isClassCompiled(), event.hasError()));
+        trackMethods(bClass);
         attachEditor(bClass);
     }
 
     @Override
     public void classRemoved(ClassEvent event) {
-        publish(new ClassEventFactory("removed", event.getBClass().getName(), null,
+        String className = event.getBClass().getName();
+        publish(new ClassEventFactory("removed", className, null,
             event.isClassCompiled(), event.hasError()));
+        Set<String> previous;
+        synchronized (methodSignaturesByClass) {
+            previous = methodSignaturesByClass.remove(className);
+        }
+        if (previous != null) {
+            for (String signature : previous) {
+                publish(new MethodEvent("removed", className, signature));
+            }
+        }
     }
 
     @Override
     public void classStateChanged(ClassEvent event) {
         publish(new ClassEventFactory("stateChanged", event.getBClass().getName(), null,
             event.isClassCompiled(), event.hasError()));
+        trackMethods(event.getBClass());
         attachEditor(event.getBClass());
     }
 
     private void attachEditors(PackageEvent event) {
         try {
             for (BClass bClass : event.getPackage().getClasses()) {
+                publish(new ClassEventFactory("opened", bClass.getName(), null,
+                    bClass.isCompiled(), false));
+                trackMethods(bClass);
                 attachEditor(bClass);
             }
         } catch (ExtensionException exception) {
             LOGGER.log(Level.FINE, "Unable to inspect package editors", exception);
+        }
+    }
+
+    /**
+     * Compares the class's declared method signatures with the previous snapshot.
+     * This detects method additions and removals after a successful BlueJ class update.
+     */
+    private void trackMethods(BClass bClass) {
+        try {
+            String className = bClass.getName();
+            Set<String> current = new LinkedHashSet<>();
+            BMethod[] methods = bClass.getDeclaredMethods();
+            if (methods != null) {
+                for (BMethod method : methods) {
+                    if (method != null) {
+                        current.add(method.toString());
+                    }
+                }
+            }
+
+            Set<String> previous;
+            synchronized (methodSignaturesByClass) {
+                previous = methodSignaturesByClass.put(className, current);
+            }
+            if (previous == null) {
+                for (String signature : current) {
+                    publish(new MethodEvent("discovered", className, signature));
+                }
+                return;
+            }
+            for (String signature : current) {
+                if (!previous.contains(signature)) {
+                    publish(new MethodEvent("added", className, signature));
+                }
+            }
+            for (String signature : previous) {
+                if (!current.contains(signature)) {
+                    publish(new MethodEvent("removed", className, signature));
+                }
+            }
+        } catch (Exception exception) {
+            LOGGER.log(Level.FINE, "Unable to inspect declared methods for telemetry", exception);
         }
     }
 

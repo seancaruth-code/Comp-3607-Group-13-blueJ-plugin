@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.comp3607.telemetry.events.ExecutionEvent;
 
+/**
+ * Creates method-invocation events.
+ */
 public class ExecutionEventFactory extends TelemetryEventFactory {
 
     private final boolean successful;

@@ -4,6 +4,9 @@ import java.util.List;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
+/**
+ * Serializes telemetry events as CSV rows.
+ */
 public class CsvExportStrategy implements ExportStrategy {
 
     private static final String HEADER = "eventId,eventType,timestamp,description,details";

@@ -1,14 +1,7 @@
-# Maven build output
 target/
-
-# Compiled Java files
 *.class
-
-# IDE files
+*.log
+bluej-telemetry/
 .idea/
 .vscode/
-*.iml
-
-# Operating system files
 .DS_Store
-Thumbs.db

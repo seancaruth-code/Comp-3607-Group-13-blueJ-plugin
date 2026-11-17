@@ -3,12 +3,14 @@ package com.comp3607.telemetry.strategy;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 import com.comp3607.telemetry.events.ClassEvent;
 import com.comp3607.telemetry.events.CompilationEvent;
 import com.comp3607.telemetry.events.EditorEvent;
 import com.comp3607.telemetry.events.ExecutionEvent;
 import com.comp3607.telemetry.events.ProjectEvent;
+import com.comp3607.telemetry.events.MethodEvent;
 import com.comp3607.telemetry.events.TelemetryEvent;
 
 final class EventDetails {
@@ -28,16 +30,22 @@ final class EventDetails {
             fields.put("compilationTimeMs", e.isCompilationTimeAvailable() ? e.getCompilationTime() : null);
             fields.put("errorMessage", e.getErrorMessage());
             fields.put("errorLine", e.getErrorLineNumber());
+            int[] position = e.getErrorPosition();
+            fields.put("errorPosition", position == null ? null : Arrays.stream(position).boxed().toList());
             fields.put("files", e.getFiles());
+            fields.put("userGenerated", e.isUserGeneratedCompilation());
         } else if (event instanceof ExecutionEvent e) {
             fields.put("successful", e.getSuccessful());
             fields.put("executionTimeMs", e.getExecutionTime());
             fields.put("className", e.getClassName());
             fields.put("methodName", e.getMethodName());
+            fields.put("objectName", e.getObjectName());
+            fields.put("parameters", e.getParameters());
             fields.put("terminationType", e.getTerminationType());
             fields.put("exceptionMessage", e.getExceptionMessage());
         } else if (event instanceof EditorEvent e) {
             fields.put("activityType", e.getActivityType());
+            fields.put("durationMs", e.getDuration());
             fields.put("editCount", e.getEditCount());
             fields.put("typingCadenceMs", e.getTypingCadence());
             fields.put("editFrequencyPerMin", e.getEditFrequency());
@@ -51,6 +59,10 @@ final class EventDetails {
         } else if (event instanceof ProjectEvent e) {
             fields.put("action", e.getAction());
             fields.put("itemName", e.getItemName());
+        } else if (event instanceof MethodEvent e) {
+            fields.put("action", e.getAction());
+            fields.put("className", e.getClassName());
+            fields.put("methodSignature", e.getMethodSignature());
         }
         return fields;
     }

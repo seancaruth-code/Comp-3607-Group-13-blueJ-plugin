@@ -6,6 +6,9 @@ import java.util.Map;
 
 import com.comp3607.telemetry.events.TelemetryEvent;
 
+/**
+ * Serializes telemetry events as valid JSON.
+ */
 public class JsonExportStrategy implements ExportStrategy {
 
     @Override

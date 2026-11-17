@@ -149,6 +149,9 @@ class StrategyTest {
         assertTrue(json.contains("\"files\": [\"A.java\", \"B.java\"]"));
         assertTrue(json.contains("\"editFrequencyPerMin\": 2.5"));
         assertTrue(json.contains("\"oldName\": null"));
+        assertTrue(json.contains("\"durationMs\": 5000"));
+        assertTrue(json.contains("\"parameters\": []"));
+        assertTrue(json.contains("\"userGenerated\": true"));
     }
 
     @Test

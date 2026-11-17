@@ -7,6 +7,9 @@ import com.comp3607.telemetry.events.CompilationEvent;
 import com.comp3607.telemetry.events.TelemetryEvent;
 import com.comp3607.telemetry.observer.Observer;
 
+/**
+ * Observer that aggregates compilation counts, timings and error frequencies.
+ */
 public class CompilationStatistics implements Observer {
 
     private int totalCompilationAttempts;
@@ -17,7 +20,7 @@ public class CompilationStatistics implements Observer {
     private final Map<String, Integer> errorFrequency = new HashMap<>();
 
     @Override
-    public synchronized void Event(TelemetryEvent event) {
+    public synchronized void onEvent(TelemetryEvent event) {
         if (!(event instanceof CompilationEvent)) {
             return;
         }
