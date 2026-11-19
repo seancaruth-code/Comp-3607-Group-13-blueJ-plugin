@@ -41,6 +41,7 @@ final class EventDetails {
             fields.put("methodName", e.getMethodName());
             fields.put("objectName", e.getObjectName());
             fields.put("parameters", e.getParameters());
+            fields.put("methodSignature", e.getMethodSignature());
             fields.put("terminationType", e.getTerminationType());
             fields.put("exceptionMessage", e.getExceptionMessage());
         } else if (event instanceof EditorEvent e) {

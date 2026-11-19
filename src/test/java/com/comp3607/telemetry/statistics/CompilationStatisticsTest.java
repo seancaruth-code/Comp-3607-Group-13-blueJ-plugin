@@ -14,7 +14,7 @@ class CompilationStatisticsTest {
     void countsSuccessfulCompilations() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new CompilationEvent(true, 100, null));
+        statistics.onEvent(new CompilationEvent(true, 100, null));
 
         assertEquals(1, statistics.getTotalCompilationAttempts());
         assertEquals(1, statistics.getSuccessfulCompilations());
@@ -25,7 +25,7 @@ class CompilationStatisticsTest {
     void countsFailedCompilations() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new CompilationEvent(false, 200, "Syntax error"));
+        statistics.onEvent(new CompilationEvent(false, 200, "Syntax error"));
 
         assertEquals(1, statistics.getTotalCompilationAttempts());
         assertEquals(0, statistics.getSuccessfulCompilations());
@@ -36,8 +36,8 @@ class CompilationStatisticsTest {
     void calculatesAverageCompilationTime() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new CompilationEvent(true, 100, null));
-        statistics.Event(new CompilationEvent(false, 300, "Syntax error"));
+        statistics.onEvent(new CompilationEvent(true, 100, null));
+        statistics.onEvent(new CompilationEvent(false, 300, "Syntax error"));
 
         assertEquals(200.0, statistics.getAverageCompilationTime());
     }
@@ -46,9 +46,9 @@ class CompilationStatisticsTest {
     void countsRepeatedErrorMessages() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new CompilationEvent(false, 100, "Syntax error"));
-        statistics.Event(new CompilationEvent(false, 150, "Syntax error"));
-        statistics.Event(new CompilationEvent(false, 200, "Type error"));
+        statistics.onEvent(new CompilationEvent(false, 100, "Syntax error"));
+        statistics.onEvent(new CompilationEvent(false, 150, "Syntax error"));
+        statistics.onEvent(new CompilationEvent(false, 200, "Type error"));
 
         assertEquals(Map.of("Syntax error", 2, "Type error", 1),
             statistics.getErrorFrequency());
@@ -58,9 +58,9 @@ class CompilationStatisticsTest {
     void ignoresMissingAndBlankErrorMessages() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new CompilationEvent(false, 100, null));
-        statistics.Event(new CompilationEvent(false, 100, ""));
-        statistics.Event(new CompilationEvent(false, 100, "   "));
+        statistics.onEvent(new CompilationEvent(false, 100, null));
+        statistics.onEvent(new CompilationEvent(false, 100, ""));
+        statistics.onEvent(new CompilationEvent(false, 100, "   "));
 
         assertTrue(statistics.getErrorFrequency().isEmpty());
         assertEquals(3, statistics.getFailedCompilations());
@@ -70,7 +70,7 @@ class CompilationStatisticsTest {
     void ignoresNonCompilationEvents() {
         CompilationStatistics statistics = new CompilationStatistics();
 
-        statistics.Event(new ProjectEvent("CREATE", "Student.java"));
+        statistics.onEvent(new ProjectEvent("CREATE", "Student.java"));
 
         assertEquals(0, statistics.getTotalCompilationAttempts());
         assertEquals(0.0, statistics.getAverageCompilationTime());

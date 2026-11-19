@@ -10,6 +10,7 @@ class SampleSessionFixtureTest {
         try (InputStream stream=getClass().getResourceAsStream("/sample-session.json")) {
             assertNotNull(stream,"sample-session.json should be available as test data");
             String json=new String(stream.readAllBytes(),StandardCharsets.UTF_8);
+            assertFalse(json.toLowerCase(java.util.Locale.ROOT).contains("studentid"));
             assertTrue(json.contains("\"attempts\": 5"));
             assertTrue(json.contains("\"successRate\": 0.2"));
             assertTrue(json.contains("\"successful\": false"));

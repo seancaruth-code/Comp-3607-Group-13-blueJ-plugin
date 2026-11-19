@@ -8,7 +8,7 @@ import com.comp3607.telemetry.events.TelemetryEvent;
 /** Immutable snapshot of a BlueJ coding session and its derived statistics. */
 public final class SessionReport {
     /** Name of the BlueJ project. */
-    private final String studentId, projectName;
+    private final String projectName;
     /** Time the telemetry session ended. */
     private final LocalDateTime startTime, endTime;
     /** Immutable snapshot of the recorded telemetry events. */
@@ -16,16 +16,16 @@ public final class SessionReport {
     /** Statistics calculated from the recorded events. */
     private final SessionStatistics statistics;
 
-    public SessionReport(String studentId, String projectName, LocalDateTime startTime,
+    public SessionReport(String projectName, LocalDateTime startTime,
                          LocalDateTime endTime, List<TelemetryEvent> events) {
-        if (studentId==null || projectName==null || startTime==null || endTime==null || events==null)
+        if (projectName==null || startTime==null || endTime==null || events==null)
             throw new IllegalArgumentException("Session metadata and events are required");
         if (endTime.isBefore(startTime)) throw new IllegalArgumentException("End time cannot precede start time");
-        this.studentId=studentId; this.projectName=projectName;
+        this.projectName=projectName;
         this.startTime=startTime; this.endTime=endTime;
-        this.events=List.copyOf(events); this.statistics=SessionStatistics.from(this.events);
+        this.events=List.copyOf(events);
+        this.statistics=SessionStatistics.from(this.events,getDuration().toMillis());
     }
-    public String getStudentId(){return studentId;}
     public String getProjectName(){return projectName;}
     public LocalDateTime getStartTime(){return startTime;}
     public LocalDateTime getEndTime(){return endTime;}

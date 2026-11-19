@@ -26,8 +26,12 @@ public final class SessionStatistics {
 
     private final int totalEvents, compilationAttempts, successfulCompilations,
         failedCompilations, executions, failedExecutions, totalEdits;
+    private final double averageCompilationTimeMs;
     /** Estimated idle time in milliseconds. */
     private final long activeTimeMs, idleTimeMs;
+    private final long inactiveTimeMs, typingTimeMs;
+    private final long sessionDurationMs, unclassifiedTimeMs, awayTimeMs;
+    private final double activeRatio;
     /** Event categories and their counts. */
     private final Map<String,Integer> errorFrequency, eventCounts;
     /** Chronological class lifecycle events. */
@@ -36,8 +40,13 @@ public final class SessionStatistics {
     private final List<MethodTimelineEntry> methodTimeline;
 
     private SessionStatistics(List<TelemetryEvent> events) {
+        this(events, 0L);
+    }
+
+    private SessionStatistics(List<TelemetryEvent> events, long sessionDurationMs) {
         int attempts=0, successes=0, failures=0, runs=0, failedRuns=0, edits=0;
-        long active=0, idle=0;
+        long active=0, idle=0, compilationTime=0;
+        int timedCompilations=0;
         Map<String,Integer> errors=new LinkedHashMap<>(), counts=new TreeMap<>();
         List<ClassTimelineEntry> classes=new ArrayList<>();
         List<MethodTimelineEntry> methods=new ArrayList<>();
@@ -45,11 +54,16 @@ public final class SessionStatistics {
             counts.merge(event.getEventType(),1,Integer::sum);
             if (event instanceof CompilationEvent c) {
                 attempts++;
+                if(c.isCompilationTimeAvailable()){
+                    compilationTime+=Math.max(0,c.getCompilationTime());
+                    timedCompilations++;
+                }
                 if (c.getSuccessful()) successes++;
                 else {
                     failures++;
                     String message=c.getErrorMessage();
-                    errors.merge(message==null || message.isBlank() ? "Unknown error" : message.strip(),1,Integer::sum);
+                    if(message!=null && !message.isBlank())
+                        errors.merge(message.strip(),1,Integer::sum);
                 }
             } else if (event instanceof ExecutionEvent e) {
                 runs++;
@@ -70,12 +84,24 @@ public final class SessionStatistics {
         this.successfulCompilations=successes; this.failedCompilations=failures;
         this.executions=runs; this.failedExecutions=failedRuns; this.totalEdits=edits;
         this.activeTimeMs=active; this.idleTimeMs=idle;
+        this.inactiveTimeMs=idle;
+        this.typingTimeMs=active;
+        this.sessionDurationMs=Math.max(0L,sessionDurationMs);
+        long measured=Math.min(this.sessionDurationMs,active)+Math.min(Math.max(0L,this.sessionDurationMs-active),idle);
+        this.unclassifiedTimeMs=Math.max(0L,this.sessionDurationMs-measured);
+        this.awayTimeMs=0L;
+        this.activeRatio=ratio(active,active+idle);
+        this.averageCompilationTimeMs=timedCompilations==0?0.0:(double)compilationTime/timedCompilations;
         this.errorFrequency=Collections.unmodifiableMap(new LinkedHashMap<>(errors)); this.eventCounts=Collections.unmodifiableMap(new LinkedHashMap<>(counts));
         this.classTimeline=List.copyOf(classes); this.methodTimeline=List.copyOf(methods);
     }
     public static SessionStatistics from(List<TelemetryEvent> events) {
         if (events==null) throw new IllegalArgumentException("Events cannot be null");
         return new SessionStatistics(List.copyOf(events));
+    }
+    public static SessionStatistics from(List<TelemetryEvent> events, long sessionDurationMs) {
+        if (events==null) throw new IllegalArgumentException("Events cannot be null");
+        return new SessionStatistics(List.copyOf(events),sessionDurationMs);
     }
     public int getTotalEvents(){return totalEvents;}
     public int getCompilationAttempts(){return compilationAttempts;}
@@ -86,9 +112,15 @@ public final class SessionStatistics {
     public int getExecutions(){return executions;}
     public int getFailedExecutions(){return failedExecutions;}
     public int getTotalEdits(){return totalEdits;}
+    public double getAverageCompilationTimeMs(){return averageCompilationTimeMs;}
     public long getActiveTimeMs(){return activeTimeMs;}
     public long getIdleTimeMs(){return idleTimeMs;}
-    public double getActiveRatio(){return ratio(activeTimeMs,activeTimeMs+idleTimeMs);}
+    public long getInactiveTimeMs(){return inactiveTimeMs;}
+    public long getTypingTimeMs(){return typingTimeMs;}
+    public long getSessionDurationMs(){return sessionDurationMs;}
+    public long getUnclassifiedTimeMs(){return unclassifiedTimeMs;}
+    public long getAwayTimeMs(){return awayTimeMs;}
+    public double getActiveRatio(){return activeRatio;}
     public Map<String,Integer> getErrorFrequency(){return errorFrequency;}
     public Map<String,Integer> getEventCounts(){return eventCounts;}
     public List<ClassTimelineEntry> getClassTimeline(){return classTimeline;}

@@ -3,6 +3,7 @@ package com.comp3607.telemetry.strategy;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -206,17 +207,63 @@ class StrategyTest {
 
     // ---------- File output ----------
 
-    @Test
-    void exportToFileUsesTheStrategyExtensionAndWritesItsOutput(@TempDir Path dir) throws IOException {
-        List<TelemetryEvent> events = sampleEvents();
-        EventExporter exporter = new EventExporter(new JsonExportStrategy());
+    @ParameterizedTest
+    @MethodSource("allStrategies")
+    void exportToFileCreatesUtf8FileWithExactStrategyOutput(
+            ExportStrategy strategy, @TempDir Path dir) throws IOException {
+        List<TelemetryEvent> events = List.of(
+            new TelemetryEvent("ÉVÉNEMENT-编程", "Café 日本語 Привет κόσμος"));
+        EventExporter exporter = new EventExporter(strategy);
 
+        Path file = exporter.exportToFile(events, dir, "utf8-session");
+
+        assertTrue(Files.exists(file), "exported file should exist");
+        assertTrue(Files.isRegularFile(file), "exported path should be a regular file");
+        assertEquals("utf8-session." + strategy.getFileExtension(),
+            file.getFileName().toString());
+        String actual = Files.readString(file, StandardCharsets.UTF_8);
+        assertEquals(strategy.export(events), actual);
+        assertTrue(actual.contains("Café"));
+        assertTrue(actual.contains("日本語"));
+        assertTrue(actual.contains("Привет"));
+        assertTrue(actual.contains("κόσμος"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("allStrategies")
+    void exportToFileSupportsAnEmptyEventList(ExportStrategy strategy, @TempDir Path dir)
+            throws IOException {
+        EventExporter exporter = new EventExporter(strategy);
+
+        Path file = exporter.exportToFile(List.of(), dir, "empty");
+
+        assertTrue(Files.exists(file));
+        assertEquals("empty." + strategy.getFileExtension(), file.getFileName().toString());
+        assertEquals(strategy.export(List.of()),
+            Files.readString(file, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void changingStrategyChangesTheFileFormatAndExtension(@TempDir Path dir) throws IOException {
+        EventExporter exporter = new EventExporter(new CsvExportStrategy());
+        List<TelemetryEvent> events = sampleEvents();
+
+        Path csv = exporter.exportToFile(events, dir, "session");
+        assertEquals("session.csv", csv.getFileName().toString());
+        assertEquals(exporter.export(events),
+            Files.readString(csv, StandardCharsets.UTF_8));
+
+        exporter.setStrategy(new JsonExportStrategy());
         Path json = exporter.exportToFile(events, dir, "session");
         assertEquals("session.json", json.getFileName().toString());
-        assertEquals(exporter.export(events), Files.readString(json));
+        assertEquals(exporter.export(events),
+            Files.readString(json, StandardCharsets.UTF_8));
 
-        exporter.setStrategy(new CsvExportStrategy());
-        assertEquals("session.csv", exporter.exportToFile(events, dir, "session").getFileName().toString());
+        exporter.setStrategy(new TextExportStrategy());
+        Path text = exporter.exportToFile(events, dir, "session");
+        assertEquals("session.txt", text.getFileName().toString());
+        assertEquals(exporter.export(events),
+            Files.readString(text, StandardCharsets.UTF_8));
     }
 
     @Test

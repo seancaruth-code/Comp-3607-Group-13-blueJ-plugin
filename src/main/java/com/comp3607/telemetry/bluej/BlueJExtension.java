@@ -17,8 +17,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import com.comp3607.telemetry.report.SessionReport;
 import com.comp3607.telemetry.events.MethodEvent;
+import com.comp3607.telemetry.events.EditorEvent;
 import com.comp3607.telemetry.report.PdfReportGenerator;
 import com.comp3607.telemetry.report.SessionJsonReportGenerator;
 
@@ -33,6 +39,12 @@ import com.comp3607.telemetry.statistics.CompilationStatistics;
 import bluej.extensions2.*;
 import bluej.extensions2.editor.*;
 import bluej.extensions2.event.*;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
+import javafx.stage.FileChooser;
+import javafx.stage.Window;
 
 public class BlueJExtension extends Extension
         implements PackageListener, CompileListener, InvocationFinishedListener, ClassListener {
@@ -47,10 +59,21 @@ public class BlueJExtension extends Extension
     private final Map<JavaEditor, EditorRegistration> editorTrackers =Collections.synchronizedMap(new IdentityHashMap<>());
     private final Map<String, Set<String>> methodSignaturesByClass = new HashMap<>();
     private final long idleThresholdMillis;
+    private EditorActivityTracker editorActivityTracker;
+    private ScheduledExecutorService editorScanExecutor;
+    private ScheduledFuture<?> editorScanFuture;
+    private volatile BPackage scannedProject;
     private long compilationStartNanos = -1;
     private String lastCompilationError;
     private LocalDateTime sessionStart;
     private String currentProjectName = "BlueJ Project";
+    
+    private final ExecutorService reportExecutor =
+        Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "bluej-telemetry-report");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     public BlueJExtension() {
         this(30_000);
@@ -61,6 +84,7 @@ public class BlueJExtension extends Extension
             throw new IllegalArgumentException("Idle threshold cannot be negative");
         }
         this.idleThresholdMillis = idleThresholdMillis;
+        this.editorActivityTracker = new EditorActivityTracker(idleThresholdMillis);
         telemetrySubject.addObserver(observerManager);
         telemetrySubject.addObserver(compilationStatistics);
     }
@@ -82,6 +106,8 @@ public class BlueJExtension extends Extension
 
         this.blueJ = bluej;
         this.sessionStart = LocalDateTime.now();
+        this.editorActivityTracker = new EditorActivityTracker(idleThresholdMillis);
+        bluej.setMenuGenerator(new TelemetryMenuGenerator());
         bluej.addPackageListener(this);
         bluej.addCompileListener(this);
         bluej.addInvocationFinishedListener(this);
@@ -91,7 +117,13 @@ public class BlueJExtension extends Extension
 
     @Override
     public void terminate() {
+        EditorEvent finalEvent = editorActivityTracker.endSession(java.time.Instant.now());
+        if (finalEvent != null) {
+            publish(finalEvent);
+        }
+        stopEditorPolling();
         if (blueJ != null) {
+            blueJ.setMenuGenerator(null);
             blueJ.removePackageListener(this);
             blueJ.removeCompileListener(this);
             blueJ.removeInvocationFinishedListener(this);
@@ -101,17 +133,155 @@ public class BlueJExtension extends Extension
             listenersRegistered = false;
         }
         exportSessionReport();
+        reportExecutor.shutdown();
     }
 
-    private void exportSessionReport() {
+    private final class TelemetryMenuGenerator extends MenuGenerator {
+        @Override
+        public MenuItem getToolsMenuItem(BPackage project) {
+            Menu menu = new Menu("Telemetry Reports");
+
+            MenuItem jsonItem = new MenuItem("Export JSON Report");
+            jsonItem.setOnAction(event -> chooseAndExportJson());
+
+            MenuItem pdfItem = new MenuItem("Export PDF Report");
+            pdfItem.setOnAction(event -> chooseAndExportPdf());
+
+            menu.getItems().setAll(jsonItem, pdfItem);
+            return menu;
+        }
+    }
+
+    private void chooseAndExportJson() {
+        FileChooser chooser = createSaveChooser("JSON Report", "telemetry-report.json", "*.json");
+        Window owner = blueJ == null ? null : blueJ.getCurrentWindow();
+        File selected = chooser.showSaveDialog(owner);
+        if (selected == null) {
+            return;
+        }
+        Path destination = ensureJsonExtension(selected.toPath());
+        SessionReport snapshot = buildSessionSnapshot();
+        reportExecutor.execute(() -> {
+            try {
+                Path saved = new SessionJsonReportGenerator().generate(snapshot, destination);
+                showInformation("JSON report saved", "Saved JSON report to:\n" + saved.toAbsolutePath());
+            } catch (Exception exception) {
+                LOGGER.log(Level.WARNING, "Unable to manually export JSON report", exception);
+                showError("Unable to export JSON report",
+                    "The JSON report could not be saved:\n" + exception.getMessage());
+            }
+        });
+    }
+
+    private void chooseAndExportPdf() {
+        FileChooser chooser = createSaveChooser("PDF Report", "telemetry-report.pdf", "*.pdf");
+        Window owner = blueJ == null ? null : blueJ.getCurrentWindow();
+        File selected = chooser.showSaveDialog(owner);
+        if (selected == null) {
+            return;
+        }
+        Path destination = ensurePdfExtension(selected.toPath());
+        SessionReport snapshot = buildSessionSnapshot();
+        reportExecutor.execute(() -> {
+            try {
+                Path saved = new PdfReportGenerator().generate(snapshot, destination);
+                showInformation("PDF report saved", "Saved PDF report to:\n" + saved.toAbsolutePath());
+            } catch (Exception exception) {
+                LOGGER.log(Level.WARNING, "Unable to manually export PDF report", exception);
+                showError("Unable to export PDF report",
+                    "The PDF report could not be saved:\n" + exception.getMessage());
+            }
+        });
+    }
+
+    private FileChooser createSaveChooser(String description, String initialName, String glob) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Telemetry Reports");
+        chooser.setInitialFileName(initialName);
+        Path outputDirectory = defaultOutputDirectory();
+        try {
+            java.nio.file.Files.createDirectories(outputDirectory);
+            if (java.nio.file.Files.isDirectory(outputDirectory)) {
+                chooser.setInitialDirectory(outputDirectory.toFile());
+            }
+        } catch (IOException exception) {
+            LOGGER.log(Level.FINE, "Unable to prepare telemetry output directory", exception);
+        }
+        chooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter(description, glob));
+        return chooser;
+    }
+
+    private void showInformation(String title, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.show();
+        });
+    }
+
+    private void showError(String title, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle(title);
+            alert.setHeaderText(title);
+            alert.setContentText(message);
+            alert.show();
+        });
+    }
+
+    private SessionReport buildSessionSnapshot() {
+        LocalDateTime start = sessionStart;
+        if (start == null) {
+            start = LocalDateTime.now();
+        }
+        return new SessionReport(currentProjectName, start, LocalDateTime.now(),
+            observerManager.getEvents());
+    }
+
+    Path exportJsonReport(Path destination) throws IOException {
+        if (destination == null) {
+            return null;
+        }
+        return new SessionJsonReportGenerator().generate(buildSessionSnapshot(), ensureJsonExtension(destination));
+    }
+
+    Path exportPdfReport(Path destination) throws IOException {
+        if (destination == null) {
+            return null;
+        }
+        return new PdfReportGenerator().generate(buildSessionSnapshot(), ensurePdfExtension(destination));
+    }
+
+    private static Path ensureJsonExtension(Path destination) {
+        String name = destination.getFileName().toString();
+        return name.toLowerCase(java.util.Locale.ROOT).endsWith(".json")
+            ? destination
+            : destination.resolveSibling(name + ".json");
+    }
+
+    private static Path ensurePdfExtension(Path destination) {
+        String name = destination.getFileName().toString();
+        return name.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf")
+            ? destination
+            : destination.resolveSibling(name + ".pdf");
+    }
+
+    private Path defaultOutputDirectory() {
+        return Path.of(System.getProperty("bluej.telemetry.output",
+            Path.of(System.getProperty("user.home"), "bluej-telemetry").toString()));
+    }
+
+    void exportSessionReport() {
         List<com.comp3607.telemetry.events.TelemetryEvent> events = observerManager.getEvents();
         if (events.isEmpty() || sessionStart == null) {
             return;
         }
         try {
             LocalDateTime end = LocalDateTime.now();
-            String studentId = System.getProperty("bluej.telemetry.studentId", "unknown");
-            SessionReport report = new SessionReport(studentId, currentProjectName, sessionStart, end, events);
+            SessionReport report = new SessionReport(currentProjectName, sessionStart, end, events);
             Path directory = Path.of(System.getProperty("bluej.telemetry.output",
                 Path.of(System.getProperty("user.home"), "bluej-telemetry").toString()));
             String stamp = end.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
@@ -165,11 +335,13 @@ public class BlueJExtension extends Extension
         currentProjectName = projectName(event);
         publish(new ProjectEventFactory("opened", currentProjectName));
         attachEditors(event);
+        startEditorPolling(event.getPackage());
     }
 
     @Override
     public void packageClosing(PackageEvent event) {
         publish(new ProjectEventFactory("closing", projectName(event)));
+        stopEditorPolling();
         detachEditors(event);
     }
  
@@ -203,13 +375,15 @@ public class BlueJExtension extends Extension
 
     @Override
     public void invocationFinished(InvocationFinishedEvent event) {
-        boolean successful = event.getEventType()== InvocationFinishedEvent.EventType.NORMAL_EXIT;
-
-        Object result = event.getResult();
-        String exceptionMessage = null;
-        if (result instanceof Throwable) {
-            exceptionMessage = ((Throwable) result).getMessage();
+        InvocationFinishedEvent.EventType eventType = event.getEventType();
+        if (eventType == null) {
+            eventType = InvocationFinishedEvent.EventType.UNKNOWN_EXIT;
         }
+        boolean successful = eventType == InvocationFinishedEvent.EventType.NORMAL_EXIT;
+
+        // getResult() is the invoked method's return value (or null for void) and is
+        // therefore not a reliable source of exception details.
+        String exceptionMessage = null;
         String[] suppliedParameters = event.getParameters();
         List<String> parameters;
         if (suppliedParameters == null) {
@@ -217,9 +391,18 @@ public class BlueJExtension extends Extension
         } else {
             parameters = Arrays.asList(suppliedParameters.clone());
         }
+        Class<?>[] suppliedSignature = event.getSignature();
+        List<String> methodSignature;
+        if (suppliedSignature == null) {
+            methodSignature = List.of();
+        } else {
+            methodSignature = Arrays.stream(suppliedSignature)
+                .map(type -> type == null ? "" : type.getTypeName())
+                .toList();
+        }
         publish(new ExecutionEventFactory(successful, (Long) null,
             event.getClassName(), event.getMethodName(), event.getObjectName(), parameters,
-            event.getEventType().name(), exceptionMessage));
+            methodSignature, eventType.name(), exceptionMessage));
     }
 
     private synchronized void publishCompilation(boolean successful, CompileEvent event) {
@@ -260,6 +443,22 @@ public class BlueJExtension extends Extension
 
     private void publish(com.comp3607.telemetry.events.TelemetryEvent event) {
         telemetrySubject.notifyObservers(event);
+    }
+
+    LocalDateTime getSessionStartTime() {
+        return sessionStart;
+    }
+
+    void setSessionStartTime(LocalDateTime startTime) {
+        sessionStart = startTime;
+    }
+
+    List<com.comp3607.telemetry.events.TelemetryEvent> getSessionEventsSnapshot() {
+        return observerManager.getEvents();
+    }
+
+    void publishSessionEvent(com.comp3607.telemetry.events.TelemetryEvent event) {
+        publish(event);
     }
 
     @Override
@@ -367,14 +566,48 @@ public class BlueJExtension extends Extension
                 if (editorTrackers.containsKey(editor)) {
                     return;
                 }
-                EditorActivityTracker tracker = new EditorActivityTracker(idleThresholdMillis);
                 DocumentListener listener = (length, oldText, newText, start, end) ->
-                    publish(tracker.recordEdit(java.time.Instant.now()));
-                editorTrackers.put(editor, new EditorRegistration(listener));
+                    publish(editorActivityTracker.recordEdit(java.time.Instant.now()));
                 editor.addDocumentListener(listener);
+                editorTrackers.put(editor, new EditorRegistration(listener));
             }
-        } catch (ExtensionException exception) {
+        } catch (ExtensionException | RuntimeException exception) {
             LOGGER.log(Level.FINE, "Unable to attach editor telemetry", exception);
+        }
+    }
+
+    private synchronized void startEditorPolling(BPackage project) {
+        stopEditorPolling();
+        scannedProject = project;
+        editorScanExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "bluej-telemetry-editor-scan");
+            thread.setDaemon(true);
+            return thread;
+        });
+        editorScanFuture = editorScanExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                BPackage current = scannedProject;
+                if (current == null) {
+                    return;
+                }
+                for (BClass bClass : current.getClasses()) {
+                    attachEditor(bClass);
+                }
+            } catch (ExtensionException exception) {
+                LOGGER.log(Level.FINE, "Unable to scan for newly opened editors", exception);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+    }
+
+    private synchronized void stopEditorPolling() {
+        scannedProject = null;
+        if (editorScanFuture != null) {
+            editorScanFuture.cancel(true);
+            editorScanFuture = null;
+        }
+        if (editorScanExecutor != null) {
+            editorScanExecutor.shutdownNow();
+            editorScanExecutor = null;
         }
     }
 

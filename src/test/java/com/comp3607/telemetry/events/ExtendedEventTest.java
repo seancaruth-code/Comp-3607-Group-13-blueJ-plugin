@@ -24,14 +24,40 @@ class ExtendedEventTest {
     @Test
     void preservesExecutionMetadataAndUnknownDuration() {
         ExecutionEvent event = new ExecutionEventFactory(false, null, "A", "run", "a",
-            List.of("1"), "EXCEPTION_EXIT", "boom").createEvent();
+            List.of("1"), List.of("java.lang.String"), "EXCEPTION_EXIT", null).createEvent();
 
         assertNull(event.getExecutionTime());
         assertEquals("A", event.getClassName());
         assertEquals("run", event.getMethodName());
+        assertEquals("a", event.getObjectName());
         assertEquals(List.of("1"), event.getParameters());
+        assertEquals(List.of("java.lang.String"), event.getMethodSignature());
         assertEquals("EXCEPTION_EXIT", event.getTerminationType());
-        assertEquals("boom", event.getExceptionMessage());
+        assertNull(event.getExceptionMessage());
+    }
+
+    @Test
+    void preservesSuccessfulStaticAndConstructorExecutions() {
+        ExecutionEvent staticCall = new ExecutionEventFactory(true, null, "TelemetryTest", "main",
+            null, List.of(), List.of("[Ljava.lang.String;", "java.lang.String"), "NORMAL_EXIT", null)
+            .createEvent();
+        ExecutionEvent constructor = new ExecutionEventFactory(true, null, "TelemetryTest", null,
+            "telemetr1", List.of("7"), List.of("int"), "NORMAL_EXIT", null).createEvent();
+
+        assertTrue(staticCall.getSuccessful());
+        assertEquals("TelemetryTest", staticCall.getClassName());
+        assertEquals("main", staticCall.getMethodName());
+        assertNull(staticCall.getObjectName());
+        assertEquals(List.of("[Ljava.lang.String;", "java.lang.String"),
+            staticCall.getMethodSignature());
+        assertEquals("NORMAL_EXIT", staticCall.getTerminationType());
+        assertNull(staticCall.getExecutionTime());
+        assertNull(staticCall.getExceptionMessage());
+
+        assertTrue(constructor.getSuccessful());
+        assertNull(constructor.getMethodName());
+        assertEquals("telemetr1", constructor.getObjectName());
+        assertEquals(List.of("7"), constructor.getParameters());
     }
 
     @Test

@@ -21,6 +21,8 @@ public class ExecutionEvent extends TelemetryEvent {
     private final String objectName;
     /** Invocation parameter descriptions. */
     private final List<String> parameters;
+    /** Parameter types exposed by BlueJ for this invocation. */
+    private final List<String> methodSignature;
     /** BlueJ invocation termination category. */
     private final String terminationType;
     /** Exception message, when an invocation failed. */
@@ -35,7 +37,13 @@ public class ExecutionEvent extends TelemetryEvent {
     }
 
     public ExecutionEvent(boolean successful, Long executionTime, String className,String methodName, String objectName, List<String> parameters,String terminationType, String exceptionMessage) {
+        this(successful, executionTime, className, methodName, objectName, parameters,
+            List.of(), terminationType, exceptionMessage);
+    }
 
+    public ExecutionEvent(boolean successful, Long executionTime, String className, String methodName,
+                         String objectName, List<String> parameters, List<String> methodSignature,
+                         String terminationType, String exceptionMessage) {
         super("EXECUTION",getmessage(successful));
 
         this.successful = successful;
@@ -44,6 +52,7 @@ public class ExecutionEvent extends TelemetryEvent {
         this.methodName = methodName;
         this.objectName = objectName;
         this.parameters = copyParameters(parameters);
+        this.methodSignature = copyParameters(methodSignature);
         this.terminationType = terminationType;
         this.exceptionMessage = exceptionMessage;
     }
@@ -82,6 +91,9 @@ public class ExecutionEvent extends TelemetryEvent {
     }
     public List<String> getParameters() {
         return parameters; 
+    }
+    public List<String> getMethodSignature() {
+        return methodSignature;
     }
     public String getTerminationType() { 
         return terminationType; 

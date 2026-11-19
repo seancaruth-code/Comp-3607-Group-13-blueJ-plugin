@@ -15,7 +15,6 @@ public final class SessionJsonReportGenerator {
         if(parent!=null) Files.createDirectories(parent);
         SessionStatistics s=report.getStatistics();
         StringBuilder b=new StringBuilder("{\n  \"session\": {\n");
-        field(b,"studentId",quote(report.getStudentId()),true);
         field(b,"projectName",quote(report.getProjectName()),true);
         field(b,"startTime",quote(report.getStartTime().toString()),true);
         field(b,"endTime",quote(report.getEndTime().toString()),true);
@@ -23,6 +22,8 @@ public final class SessionJsonReportGenerator {
         b.append("  },\n  \"summary\": {\n");
         field(b,"totalEvents",String.valueOf(s.getTotalEvents()),true);
         field(b,"totalCompilationAttempts",String.valueOf(s.getCompilationAttempts()),true);
+        field(b,"averageCompilationTimeMs",String.valueOf(s.getAverageCompilationTimeMs()),true);
+        field(b,"totalSyntaxErrors",String.valueOf(s.getFailedCompilations()),true);
         field(b,"successfulCompilations",String.valueOf(s.getSuccessfulCompilations()),true);
         field(b,"failedCompilations",String.valueOf(s.getFailedCompilations()),true);
         field(b,"compilationSuccessRate",String.valueOf(s.getCompilationSuccessRate()),true);
@@ -30,7 +31,12 @@ public final class SessionJsonReportGenerator {
         field(b,"totalEdits",String.valueOf(s.getTotalEdits()),true);
         field(b,"activeTimeMs",String.valueOf(s.getActiveTimeMs()),true);
         field(b,"idleTimeMs",String.valueOf(s.getIdleTimeMs()),true);
+        field(b,"inactiveTimeMs",String.valueOf(s.getInactiveTimeMs()),true);
+        field(b,"typingTimeMs",String.valueOf(s.getTypingTimeMs()),true);
+        field(b,"awayTimeMs",String.valueOf(s.getAwayTimeMs()),true);
+        field(b,"unclassifiedTimeMs",String.valueOf(s.getUnclassifiedTimeMs()),true);
         field(b,"activeRatio",String.valueOf(s.getActiveRatio()),true);
+        field(b,"sessionDurationMs",String.valueOf(s.getSessionDurationMs()),true);
         field(b,"executions",String.valueOf(s.getExecutions()),true);
         field(b,"failedExecutions",String.valueOf(s.getFailedExecutions()),false);
         b.append("  },\n  \"eventCounts\": {");

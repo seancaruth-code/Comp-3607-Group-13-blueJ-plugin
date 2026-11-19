@@ -15,6 +15,7 @@ public class ExecutionEventFactory extends TelemetryEventFactory {
     private final String methodName;
     private final String objectName;
     private final List<String> parameters;
+    private final List<String> methodSignature;
     private final String terminationType;
     private final String exceptionMessage;
 
@@ -32,6 +33,7 @@ public class ExecutionEventFactory extends TelemetryEventFactory {
         this.methodName = null;
         this.objectName = null;
         this.parameters = List.of();
+        this.methodSignature = List.of();
         this.terminationType = null;
         this.exceptionMessage = null;
     }
@@ -39,6 +41,14 @@ public class ExecutionEventFactory extends TelemetryEventFactory {
     public ExecutionEventFactory(boolean successful, Long executionTime, String className,
                                  String methodName, String objectName, List<String> parameters,
                                  String terminationType, String exceptionMessage) {
+        this(successful, executionTime, className, methodName, objectName, parameters,
+            List.of(), terminationType, exceptionMessage);
+    }
+
+    public ExecutionEventFactory(boolean successful, Long executionTime, String className,
+                                 String methodName, String objectName, List<String> parameters,
+                                 List<String> methodSignature, String terminationType,
+                                 String exceptionMessage) {
         if (executionTime != null && executionTime < 0) {
             throw new IllegalArgumentException("Execution time cannot be negative");
         }
@@ -48,6 +58,7 @@ public class ExecutionEventFactory extends TelemetryEventFactory {
         this.methodName = methodName;
         this.objectName = objectName;
         this.parameters = copyParameters(parameters);
+        this.methodSignature = copyParameters(methodSignature);
         this.terminationType = terminationType;
         this.exceptionMessage = exceptionMessage;
     }
@@ -55,7 +66,7 @@ public class ExecutionEventFactory extends TelemetryEventFactory {
     @Override
     public ExecutionEvent createEvent() {
         return new ExecutionEvent(successful, executionTime, className, methodName, objectName,
-            parameters, terminationType, exceptionMessage);
+            parameters, methodSignature, terminationType, exceptionMessage);
     }
 
     private static List<String> copyParameters(List<String> parameters) {
